@@ -21,63 +21,15 @@ struct PCB {
     vector<int> instructions; // Store instructions for loading into memory
 };
 
-// Function to allocate memory for processes and load instructions
-bool allocateMemory(int maxMemorySize, vector<PCB>& pcbs, vector<int>& memory) {
-    memory.resize(maxMemorySize, -1); // Initialize memory with -1 (empty space)
-    int currentAddress = 0;
-
-    for (auto& pcb : pcbs) {
-        if (currentAddress + pcb.maxMemoryNeeded > maxMemorySize) {
-            cerr << "Error: Not enough memory to allocate process " << pcb.processID << endl;
-            return false;
-        }
-
-        pcb.mainMemoryBase = currentAddress;
-        pcb.instructionBase = pcb.mainMemoryBase + 10; // Reserve 10 slots for PCB metadata
-        pcb.dataBase = pcb.instructionBase + pcb.instructions.size(); // Instructions first, then data
-
-        // Mark PCB storage in memory
-        for (int i = 0; i < 10; i++) {
-            memory[pcb.mainMemoryBase + i] = pcb.processID;
-        }
-
-        // Load instructions into memory
-        int instrAddress = pcb.instructionBase;
-        for (int instr : pcb.instructions) {
-            if (instrAddress >= maxMemorySize) {
-                cerr << "Error: Instruction memory overflow for process " << pcb.processID << endl;
-                return false;
-            }
-            memory[instrAddress++] = instr;
-        }
-
-        currentAddress += pcb.maxMemoryNeeded;
-    }
-    return true;
-}
-
-// Function to display memory layout
-void displayMemory(const vector<int>& memory, int maxDisplay = 20) {
-    cout << "\nMemory Layout (Showing Used Memory):\n";
-    cout << "Address\tContent" << endl;
-
-    int printed = 0;
-    bool skipping = false;
-
-    for (size_t i = 0; i < memory.size(); i++) {
-        if (memory[i] != -1) {  // Print only allocated memory
-            if (skipping) {
-                cout << "...\n";  // Indicate skipped empty regions
-                skipping = false;
-            }
-            cout << i << "\t" << memory[i] << endl;
-            printed++;
-        } else {
-            if (!skipping && printed > maxDisplay) {
-                cout << "...\n";  // Start skipping
-                skipping = true;
-            }
-        }
+// Function to display PCB data
+void displayPCBs(const vector<PCB>& pcbs) {
+    cout << "\nProcess Control Blocks:\n";
+    for (const auto& pcb : pcbs) {
+        cout << "Process ID: " << pcb.processID 
+             << ", State: " << pcb.state 
+             << ", Program Counter: " << pcb.programCounter 
+             << ", CPU Cycles Used: " << pcb.cpuCyclesUsed 
+             << ", Register Value: " << pcb.registerValue << "\n";
     }
 }
 
@@ -86,13 +38,7 @@ bool parseInput(int& maxMemorySize, vector<PCB>& pcbs) {
     string line;
     
     // Read the first line (maximum memory size)
-    if (!getline(cin, line)) {
-        cerr << "Error: Unable to read max memory size line!" << endl;
-        return false;
-    }
-    cout << "DEBUG: Read max memory size line -> '" << line << "'" << endl;
-    
-    if (!(istringstream(line) >> maxMemorySize)) {
+    if (!getline(cin, line) || !(istringstream(line) >> maxMemorySize)) {
         cerr << "Error: Invalid max memory size format!" << endl;
         return false;
     }
@@ -144,20 +90,88 @@ bool parseInput(int& maxMemorySize, vector<PCB>& pcbs) {
     return true;
 }
 
-// Function to display PCB data
-void displayPCBs(const vector<PCB>& pcbs) {
-    cout << "\nProcess Control Blocks:\n";
-    for (const auto& pcb : pcbs) {
-        cout << "Process ID: " << pcb.processID 
-             << ", State: " << pcb.state 
-             << ", Program Counter: " << pcb.programCounter 
-             << ", Memory Base: " << pcb.mainMemoryBase 
-             << ", Instructions: ";
-        for (int instr : pcb.instructions) {
-            cout << instr << " ";
+// Function to execute a process
+void executeProcess(PCB& pcb, vector<int>& memory) {
+    pcb.state = RUNNING;
+    int instructionPointer = pcb.instructionBase;
+    
+    while (instructionPointer < pcb.dataBase) {
+        int opcode = memory[instructionPointer];
+        instructionPointer++;
+
+        switch (opcode) {
+            case 1: { // Compute (simulated CPU cycles)
+                if (instructionPointer + 1 >= pcb.dataBase) break;
+                int iterations = memory[instructionPointer++];
+                int cycles = memory[instructionPointer++];
+                pcb.cpuCyclesUsed += (iterations * cycles);
+                break;
+            }
+            case 2: { // Print (Output a value)
+                if (instructionPointer >= pcb.dataBase) break;
+                int value = memory[instructionPointer++];
+                cout << "Process " << pcb.processID << " Output: " << value << endl;
+                break;
+            }
+            case 3: { // Store (Save value to memory)
+                if (instructionPointer + 1 >= pcb.dataBase) break;
+                int value = memory[instructionPointer++];
+                int address = memory[instructionPointer++];
+                if (address >= 0 && address < memory.size()) {
+                    memory[address] = value;
+                }
+                break;
+            }
+            case 4: { // Load (Retrieve value from memory)
+                if (instructionPointer >= pcb.dataBase) break;
+                int address = memory[instructionPointer++];
+                if (address >= 0 && address < memory.size()) {
+                    pcb.registerValue = memory[address];
+                }
+                break;
+            }
+            default:
+                cout << "Process " << pcb.processID << " encountered an unknown opcode: " << opcode << endl;
+                break;
         }
-        cout << "\n";
     }
+    
+    pcb.state = TERMINATED;
+}
+
+// Function to allocate memory for processes and load instructions
+bool allocateMemory(int maxMemorySize, vector<PCB>& pcbs, vector<int>& memory) {
+    memory.resize(maxMemorySize, -1); // Initialize memory with -1 (empty space)
+    int currentAddress = 0;
+
+    for (auto& pcb : pcbs) {
+        if (currentAddress + pcb.maxMemoryNeeded > maxMemorySize) {
+            cerr << "Error: Not enough memory to allocate process " << pcb.processID << endl;
+            return false;
+        }
+
+        pcb.mainMemoryBase = currentAddress;
+        pcb.instructionBase = pcb.mainMemoryBase + 10; // Reserve 10 slots for PCB metadata
+        pcb.dataBase = pcb.instructionBase + pcb.instructions.size(); // Instructions first, then data
+
+        // Mark PCB storage in memory
+        for (int i = 0; i < 10; i++) {
+            memory[pcb.mainMemoryBase + i] = pcb.processID;
+        }
+
+        // Load instructions into memory
+        int instrAddress = pcb.instructionBase;
+        for (int instr : pcb.instructions) {
+            if (instrAddress >= maxMemorySize) {
+                cerr << "Error: Instruction memory overflow for process " << pcb.processID << endl;
+                return false;
+            }
+            memory[instrAddress++] = instr;
+        }
+
+        currentAddress += pcb.maxMemoryNeeded;
+    }
+    return true;
 }
 
 int main() {
@@ -170,7 +184,12 @@ int main() {
         
         if (allocateMemory(maxMemorySize, pcbs, memory)) {
             displayPCBs(pcbs);
-            displayMemory(memory);
+            
+            if (!pcbs.empty()) {
+                executeProcess(pcbs[0], memory);
+                cout << "\nAfter Execution:\n";
+                displayPCBs(pcbs);
+            }
         } else {
             cerr << "Memory allocation failed." << endl;
         }
