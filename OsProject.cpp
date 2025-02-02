@@ -3,22 +3,25 @@
 #include <sstream>
 using namespace std;
 
-// Structure to store individual instructions
-struct Instruction {
-    int type;
-    vector<int> parameters;
-};
+// Enum for process states
+enum ProcessState { NEW, READY, RUNNING, TERMINATED };
 
-// Structure to store process information
-struct Process {
+// Structure to store Process Control Block (PCB)
+struct PCB {
     int processID;
+    ProcessState state;
+    int programCounter;
+    int instructionBase;
+    int dataBase;
+    int memoryLimit;
+    int cpuCyclesUsed;
+    int registerValue;
     int maxMemoryNeeded;
-    int numInstructions;
-    vector<Instruction> instructions;
+    int mainMemoryBase;
 };
 
 // Function to parse input from standard input
-bool parseInput(int& maxMemorySize, vector<Process>& processes) {
+bool parseInput(int& maxMemorySize, vector<PCB>& pcbs) {
     string line;
     
     // Read the first line (maximum memory size)
@@ -36,7 +39,7 @@ bool parseInput(int& maxMemorySize, vector<Process>& processes) {
     
     // Read each process
     for (int i = 0; i < numProcesses; i++) {
-        Process process;
+        PCB pcb;
         
         if (!getline(cin, line)) {
             cerr << "Error: Missing process data!" << endl;
@@ -44,74 +47,49 @@ bool parseInput(int& maxMemorySize, vector<Process>& processes) {
         }
         
         istringstream ss(line);
-        if (!(ss >> process.processID >> process.maxMemoryNeeded >> process.numInstructions)) {
+        int numInstructions;
+        if (!(ss >> pcb.processID >> pcb.maxMemoryNeeded >> numInstructions)) {
             cerr << "Error: Invalid process format!" << endl;
             return false;
         }
         
-        // Read instructions from the same line
-        for (int j = 0; j < process.numInstructions; j++) {
-            Instruction instr;
-            if (!(ss >> instr.type)) {
-                cerr << "Error: Missing instruction type for process " << process.processID << endl;
-                return false;
-            }
-            
-            // Determine how many parameters are needed based on the instruction type
-            int paramCount = 0;
-            if (instr.type == 1) paramCount = 2; // Compute (iterations, cycles)
-            else if (instr.type == 2) paramCount = 1; // Print (cycles)
-            else if (instr.type == 3) paramCount = 2; // Store (value, address)
-            else if (instr.type == 4) paramCount = 1; // Load (address)
-            else {
-                cerr << "Error: Invalid instruction type " << instr.type << " for process " << process.processID << endl;
-                return false;
-            }
-            
-            // Read required parameters
-            for (int k = 0; k < paramCount; k++) {
-                int param;
-                if (!(ss >> param)) {
-                    cerr << "Error: Missing parameter for instruction " << instr.type
-                         << " in process " << process.processID << endl;
-                    return false;
-                }
-                instr.parameters.push_back(param);
-            }
-            
-            process.instructions.push_back(instr);
-        }
+        // Initialize PCB fields
+        pcb.state = NEW;
+        pcb.programCounter = 0;
+        pcb.instructionBase = 0; // Will be set later during memory allocation
+        pcb.dataBase = 0;        // Will be set later
+        pcb.memoryLimit = pcb.maxMemoryNeeded;
+        pcb.cpuCyclesUsed = 0;
+        pcb.registerValue = 0;
+        pcb.mainMemoryBase = 0;  // Will be set later
         
-        processes.push_back(process);
+        pcbs.push_back(pcb);
     }
     
     return true;
 }
 
-// Function to display parsed data
-void displayProcesses(int maxMemorySize, const vector<Process>& processes) {
-    cout << "Max Memory Size: " << maxMemorySize << endl;
-    cout << "Processes Parsed: " << processes.size() << endl;
-    for (const auto& process : processes) {
-        cout << "Process ID: " << process.processID << ", Memory Needed: " << process.maxMemoryNeeded 
-             << ", Instructions: " << process.numInstructions << endl;
-        
-        for (const auto& instr : process.instructions) {
-            cout << "  Instruction Type: " << instr.type << " | Params: ";
-            for (const auto& param : instr.parameters) {
-                cout << param << " ";
-            }
-            cout << endl;
-        }
+// Function to display PCB data
+void displayPCBs(const vector<PCB>& pcbs) {
+    cout << "\nProcess Control Blocks:\n";
+    for (const auto& pcb : pcbs) {
+        cout << "Process ID: " << pcb.processID 
+             << ", State: " << pcb.state 
+             << ", Program Counter: " << pcb.programCounter 
+             << ", Memory Needed: " << pcb.maxMemoryNeeded 
+             << ", Memory Limit: " << pcb.memoryLimit 
+             << ", CPU Cycles Used: " << pcb.cpuCyclesUsed 
+             << "\n";
     }
 }
 
 int main() {
     int maxMemorySize;
-    vector<Process> processes;
+    vector<PCB> pcbs;
     
-    if (parseInput(maxMemorySize, processes)) {
-        displayProcesses(maxMemorySize, processes);
+    if (parseInput(maxMemorySize, pcbs)) {
+        cout << "Max Memory Size: " << maxMemorySize << endl;
+        displayPCBs(pcbs);
     } else {
         cerr << "Parsing failed due to errors." << endl;
     }
