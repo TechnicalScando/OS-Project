@@ -128,7 +128,7 @@ void allocateMemory(vector<int>& mainMemory, const vector<Process>& processes, i
         // Move to next available address
         currentAddress += requiredMemory;
 
-        // Print Key Memory Information for this Process
+        // Debugging: Print Key Memory Information for this Process
         cout << "\nProcess " << proc.processID << " Memory Allocation:";
         cout << "\n  PCB Location: " << currentAddress - requiredMemory;
         cout << "\n  Instruction Base: " << instructionBase;
@@ -148,6 +148,32 @@ void allocateMemory(vector<int>& mainMemory, const vector<Process>& processes, i
 
 
 
+
+
+
+#include <fstream>
+
+// Function to dump main memory to a file
+void dumpMemoryToFile(const vector<int>& mainMemory, const string& filename) {
+    ofstream outFile(filename);
+    
+    if (!outFile) {
+        cerr << "Error: Could not open file for writing: " << filename << endl;
+        return;
+    }
+
+    outFile << "======= FULL MEMORY DUMP =======\n";
+    
+    for (size_t i = 0; i < mainMemory.size(); i++) {
+        outFile << "Address " << i << ": " << mainMemory[i] << "\n";
+    }
+
+    outFile << "================================\n";
+    
+    outFile.close();
+    cout << "Memory dump written to " << filename << endl;
+}
+
 int main() {
     int maxMemory, numProcesses;
 
@@ -160,8 +186,12 @@ int main() {
     // Call memory allocation
     allocateMemory(mainMemory, processes, maxMemory);
 
+    // Dump memory to file for verification
+    dumpMemoryToFile(mainMemory, "memory_dump.txt");
+
     return 0;
 }
+
 
 
 
