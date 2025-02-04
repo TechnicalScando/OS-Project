@@ -14,9 +14,6 @@ struct Process {
 vector<Process> parseProcesses(int& maxMemory, int& numProcesses) {
     cin >> maxMemory >> numProcesses;
     
-    cout << "Max Memory: " << maxMemory << endl;
-    cout << "Number of Processes: " << numProcesses << endl;
-
     vector<Process> processes;
 
     for (int p = 0; p < numProcesses; p++) {
@@ -96,7 +93,7 @@ void allocateMemory(vector<int>& mainMemory, const vector<Process>& processes, i
         // Store PCB at current address
         pcbLocations.push_back(currentAddress);  // Store PCB location
         mainMemory[currentAddress] = proc.processID;
-        mainMemory[currentAddress + 1] = 0;  // State (NEW)
+        mainMemory[currentAddress + 1] = 1;  // State (NEW)
         mainMemory[currentAddress + 2] = 0;  // Program Counter
         mainMemory[currentAddress + 3] = currentAddress + 10;  // Instruction Base
         mainMemory[currentAddress + 4] = currentAddress + 10 + instructionCount;  // Data Base
@@ -132,16 +129,8 @@ void allocateMemory(vector<int>& mainMemory, const vector<Process>& processes, i
 }
 
 
-
-
-
-
-
-
-
 #include <fstream>
 
-// Function to dump main memory to a file
 void dumpMemoryToFile(const vector<int>& mainMemory, const string& filename) {
     ofstream outFile(filename);
     
@@ -153,100 +142,135 @@ void dumpMemoryToFile(const vector<int>& mainMemory, const string& filename) {
     outFile << "======= FULL MEMORY DUMP =======\n";
     
     for (size_t i = 0; i < mainMemory.size(); i++) {
-        outFile << "Address " << i << ": " << mainMemory[i] << "\n";
+        outFile << i << ": " << mainMemory[i] << "\n";
     }
 
     outFile << "================================\n";
     
     outFile.close();
-    cout << "Memory dump written to " << filename << endl;
+   
+}
+
+
+
+
+
+
+
+// Function to dump main memory to a file
+void dumpMemoryToString(const vector<int>& mainMemory) {
+   
+    
+
+    
+    for (size_t i = 0; i < mainMemory.size(); i++) {
+        cout <<  i << ": " << mainMemory[i] << "\n";
+    }
+
+
+    
 }
 
 void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycles) {
-    int processID = mainMemory[pcbLocation];  
-    int& state = mainMemory[pcbLocation + 1];
+   int processID = mainMemory[pcbLocation];  
+    int& state = mainMemory[pcbLocation + 1];  
     int& programCounter = mainMemory[pcbLocation + 2];  
     int instructionBase = mainMemory[pcbLocation + 3];  
     int dataBase = mainMemory[pcbLocation + 4];  
-    int memoryLimit = mainMemory[pcbLocation + 5];
-    int& cpuCyclesUsed = mainMemory[pcbLocation + 6];
-    int& registerValue = mainMemory[pcbLocation + 7];
+    int memoryLimit = mainMemory[pcbLocation + 5];  
+    int& cpuCyclesUsed = mainMemory[pcbLocation + 6];  
+    int& registerValue = mainMemory[pcbLocation + 7];  
+    int maxMemoryNeeded = mainMemory[pcbLocation + 8];  
+    int mainMemoryBase = mainMemory[pcbLocation + 9];  
 
     state = 1; // Set process state to RUNNING
+
+    int operandPointer = dataBase; // ✅ Independent operand tracking
+
 
     while (instructionBase + programCounter < dataBase) {
         int instructionAddress = instructionBase + programCounter;
         int opcode = mainMemory[instructionAddress];
 
+
         vector<int> operands;
         int numOperands = (opcode == 1) ? 2 : (opcode == 2) ? 1 : (opcode == 3) ? 2 : (opcode == 4) ? 1 : 0;
-        int operandPointer = dataBase + (programCounter * numOperands);
+
 
         for (int i = 0; i < numOperands; i++) {
-            operands.push_back(mainMemory[operandPointer + i]);
+            operands.push_back(mainMemory[operandPointer]);
+            operandPointer++;  // ✅ Correctly move operand pointer
         }
 
-        if (opcode == 1) { // Compute
+    
+
+        // Execute instruction & track CPU usage
+        if (opcode == 1) {  // Compute
             int iterations = operands[0];
             int cpuCycles = operands[1];
             cpuCyclesUsed += cpuCycles;
             totalCpuCycles += cpuCycles;
             cout << "compute" << endl;
         } 
-        else if (opcode == 2) { // Print
-            if (!operands.empty()) {
-                int cpuCycles = operands[0];  // Operand is the number of cycles used
-                cpuCyclesUsed += cpuCycles;
-                totalCpuCycles += cpuCycles;
-            }
+        else if (opcode == 2) {  // Print
+            int cpuCycles = operands[0];
+            cpuCyclesUsed += cpuCycles;
+            totalCpuCycles += cpuCycles;
             cout << "print" << endl;
         } 
-        else if (opcode == 3) { // Store
+        else if (opcode == 3) {  // Store
             int value = operands[0];
             int logicalAddress = operands[1];
             int physicalAddress = dataBase + logicalAddress;
 
             if (logicalAddress < memoryLimit) {
                 mainMemory[physicalAddress] = value;
-                cout << "stored" << endl;
+                registerValue = mainMemory[physicalAddress];
+                cout << "stored "  << endl;
             } else {
                 cout << "store error!" << endl;
             }
-
-            cpuCyclesUsed += 1;  // Store takes 1 cycle
-            totalCpuCycles += 1;
+            cpuCyclesUsed++;  // ✅ Store takes 1 cycle
+            totalCpuCycles++;
         } 
-        else if (opcode == 4) { // Load
+        else if (opcode == 4) {  // Load
             int logicalAddress = operands[0];
             int physicalAddress = dataBase + logicalAddress;
 
             if (logicalAddress < memoryLimit) {
                 registerValue = mainMemory[physicalAddress];
-                cout << "loaded" << endl;
+                cout << "loaded" <<  endl;
             } else {
                 cout << "load error!" << endl;
             }
-
-            cpuCyclesUsed += 1;  // Load takes 1 cycle
-            totalCpuCycles += 1;
+            cpuCyclesUsed++;  // ✅ Load takes 1 cycle
+            totalCpuCycles++;
         }
 
         programCounter++;
+
+       
     }
 
     state = 3; // Set process state to TERMINATED
+     // Print final PCB state
     cout << "Process ID: " << processID << "\n";
     cout << "State: TERMINATED\n";
-    cout << "Program Counter: " << programCounter << "\n";
+    cout << "Program Counter: " << instructionBase - 1 << "\n";
     cout << "Instruction Base: " << instructionBase << "\n";
     cout << "Data Base: " << dataBase << "\n";
     cout << "Memory Limit: " << memoryLimit << "\n";
     cout << "CPU Cycles Used: " << cpuCyclesUsed << "\n";
     cout << "Register Value: " << registerValue << "\n";
-    cout << "Max Memory Needed: " << memoryLimit << "\n";
-    cout << "Main Memory Base: " << pcbLocation << "\n";
-    cout << "Total CPU Cycles Consumed: " << totalCpuCycles << "\n";
+    cout << "Max Memory Needed: " << maxMemoryNeeded << "\n";
+    cout << "Main Memory Base: " << mainMemoryBase << "\n";
+    cout << "Total CPU Cycles Consumed: " << cpuCyclesUsed << "\n";
+    
 }
+
+
+
+
 
 
 
@@ -267,15 +291,20 @@ int main() {
     // Call memory allocation
     allocateMemory(mainMemory, processes, maxMemory, pcbLocations);
 
-    
+    // Dump memory to file for verification
+    dumpMemoryToFile(mainMemory, "memory_dump.txt");
+
+
+    // Dump memory to string for verification
+    dumpMemoryToString(mainMemory);
 
     // Execute each process (debugging operand fetching)
     for (int pcbLocation : pcbLocations) {
         executeProcess(mainMemory, pcbLocation, totalCpuCycles);
     }
     
-    // Dump memory to file for verification
-    dumpMemoryToFile(mainMemory, "memory_dump.txt");
+     
+    
 
     return 0;
 }
