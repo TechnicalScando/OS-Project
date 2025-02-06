@@ -221,21 +221,28 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
         else if (opcode == 3) {  // Store
             int value = operands[0];
             int logicalAddress = operands[1];
-            int physicalAddress = dataBase + logicalAddress;
+            int physicalAddress = instructionBase + logicalAddress;
 
             if (logicalAddress < memoryLimit) {
                 mainMemory[physicalAddress] = value;
                 registerValue = mainMemory[physicalAddress];
                 cout << "stored "  << endl;
             } else {
+                 mainMemory[physicalAddress] = value;
+                registerValue = mainMemory[physicalAddress];
                 cout << "store error!" << endl;
             }
             cpuCyclesUsed++;  // ✅ Store takes 1 cycle
             totalCpuCycles++;
+            if (processID == 21)
+            {
+                cout << "Register value stored" << registerValue  << endl;
+            }
+            
         } 
         else if (opcode == 4) {  // Load
             int logicalAddress = operands[0];
-            int physicalAddress = dataBase + logicalAddress;
+            int physicalAddress = instructionBase + logicalAddress;
 
             if (logicalAddress < memoryLimit) {
                 registerValue = mainMemory[physicalAddress];
