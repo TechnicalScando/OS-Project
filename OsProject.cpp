@@ -185,7 +185,7 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
 
     state = 1; // Set process state to RUNNING
 
-    int operandPointer = dataBase; // ✅ Independent operand tracking
+    int operandPointer = dataBase; //  Independent operand tracking
 
 
     while (instructionBase + programCounter < dataBase) {
@@ -199,7 +199,7 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
 
         for (int i = 0; i < numOperands; i++) {
             operands.push_back(mainMemory[operandPointer]);
-            operandPointer++;  // ✅ Correctly move operand pointer
+            operandPointer++;  //  Correctly move operand pointer
         }
 
     
@@ -223,22 +223,17 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
             int logicalAddress = operands[1];
             int physicalAddress = instructionBase + logicalAddress;
 
+            registerValue = value;
             if (logicalAddress < memoryLimit) {
                 mainMemory[physicalAddress] = value;
-                registerValue = mainMemory[physicalAddress];
+                
                 cout << "stored "  << endl;
             } else {
-                 mainMemory[physicalAddress] = value;
-                registerValue = mainMemory[physicalAddress];
+                
                 cout << "store error!" << endl;
             }
-            cpuCyclesUsed++;  // ✅ Store takes 1 cycle
+            cpuCyclesUsed++;  //  Store takes 1 cycle
             totalCpuCycles++;
-            if (processID == 21)
-            {
-                cout << "Register value stored" << registerValue  << endl;
-            }
-            
         } 
         else if (opcode == 4) {  // Load
             int logicalAddress = operands[0];
@@ -250,7 +245,7 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
             } else {
                 cout << "load error!" << endl;
             }
-            cpuCyclesUsed++;  // ✅ Load takes 1 cycle
+            cpuCyclesUsed++;  //  Load takes 1 cycle
             totalCpuCycles++;
         }
 
