@@ -3,6 +3,7 @@
 
 using namespace std;
 
+
 struct Process {
     int processID;
     int maxMemoryNeeded;
@@ -10,39 +11,36 @@ struct Process {
     vector<int> instructions;
 };
 
-// Function to parse all processes from input
-vector<Process> parseProcesses(int& maxMemory, int& numProcesses) {
-    cin >> maxMemory >> numProcesses;
+// New parseProcesses function which now reads global parameters:
+// maxMemory, numProcesses, CPUAllocated, and contextSwitchTime.
+vector<Process> parseProcesses(int &maxMemory, int &numProcesses, int &globalCPUAllocated, int &contextSwitchTime) {
+    cin >> maxMemory >> numProcesses >> globalCPUAllocated >> contextSwitchTime;
     
     vector<Process> processes;
-
     for (int p = 0; p < numProcesses; p++) {
         Process proc;
         cin >> proc.processID >> proc.maxMemoryNeeded >> proc.numInstructions;
-
-        proc.instructions.clear();
+        
         int opcode, operand;
-
-        // Read numInstructions full operations
+        // Read each instruction (opcode plus its operands)
         for (int i = 0; i < proc.numInstructions; i++) {
             cin >> opcode;
             proc.instructions.push_back(opcode);
-
+            
             int numOperands = 0;
-            if (opcode == 1) numOperands = 2;  // Compute
-            else if (opcode == 2) numOperands = 1;  // Print
-            else if (opcode == 3) numOperands = 2;  // Store
-            else if (opcode == 4) numOperands = 1;  // Load
-
+            if (opcode == 1) numOperands = 2;  // Compute: two operands
+            else if (opcode == 2) numOperands = 1;  // Print: one operand
+            else if (opcode == 3) numOperands = 2;  // Store: two operands
+            else if (opcode == 4) numOperands = 1;  // Load: one operand
+            
             for (int j = 0; j < numOperands; j++) {
                 cin >> operand;
                 proc.instructions.push_back(operand);
             }
         }
-
         processes.push_back(proc);
     }
-
+    
     return processes;
 }
 
@@ -280,34 +278,40 @@ void executeProcess(vector<int>& mainMemory, int pcbLocation, int& totalCpuCycle
 
 
 
-int main() {
-     int maxMemory, numProcesses;
-    vector<int> pcbLocations;  // Store PCB locations for execution
-    int totalCpuCycles = 0;
-    // Parse processes
-    vector<Process> processes = parseProcesses(maxMemory, numProcesses);
-
-    // Initialize main memory
-    vector<int> mainMemory(maxMemory, -1);  // Initialize all memory to -1
-
-    // Call memory allocation
-    allocateMemory(mainMemory, processes, maxMemory, pcbLocations);
-
-    // Dump memory to file for verification
-    dumpMemoryToFile(mainMemory, "memory_dump.txt");
-
-
-    // Dump memory to string for verification
-    dumpMemoryToString(mainMemory);
-
-    // Execute each process (debugging operand fetching)
-    for (int pcbLocation : pcbLocations) {
-        executeProcess(mainMemory, pcbLocation, totalCpuCycles);
+// Simple test routine to verify parsing works correctly.
+void printProcesses(const vector<Process>& processes, int globalCPUAllocated, int contextSwitchTime) {
+    cout << "Global CPUAllocated (timeout limit): " << globalCPUAllocated << "\n";
+    cout << "Context Switch Time: " << contextSwitchTime << "\n\n";
+    for (const Process &p : processes) {
+        cout << "Process ID: " << p.processID << "\n";
+        cout << "Max Memory Needed: " << p.maxMemoryNeeded << "\n";
+        cout << "Num Instructions: " << p.numInstructions << "\n";
+        cout << "Instructions: ";
+        for (int inst : p.instructions) {
+            cout << inst << " ";
+        }
+        cout << "\n\n";
     }
-    
-     
-    
+}
 
+int main() {
+    int maxMemory, numProcesses, globalCPUAllocated, contextSwitchTime;
+    
+    // For testing, provide input in the following order:
+    // maxMemory numProcesses CPUAllocated contextSwitchTime
+    // Then, for each process:
+    // processID maxMemoryNeeded numInstructions followed by the instructions (opcodes and operands)
+    //
+    // For example, you might use:
+    // 1000 2 50 5
+    // 1 200 2 1 10 3 2
+    // 2 300 1 2 4
+    //
+    // You can enter these values manually or pipe them from a file.
+    
+    vector<Process> processes = parseProcesses(maxMemory, numProcesses, globalCPUAllocated, contextSwitchTime);
+    printProcesses(processes, globalCPUAllocated, contextSwitchTime);
+    
     return 0;
 }
 
