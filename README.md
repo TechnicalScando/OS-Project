@@ -1,5 +1,5 @@
 # Simulated Operating System
-A simulated operating system with dynamic segmented memory allocation, process scheduling, and logging for educational use.
+A simulated operating system with dynamic segmented memory allocation, process scheduling, and logging.
 
 ## Features
 - Segmented memory allocation and deallocation
